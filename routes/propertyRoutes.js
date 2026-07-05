@@ -1,17 +1,24 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-
 const {
   createProperty,
   getProperties,
-} = require("../controllers/propertyController");
+  getPropertyById,
+  getMyListings,
+  updateProperty,
+  deleteProperty,
+} = require('../controllers/propertyController');
+const { protect, landlordOnly } = require('../middleware/authMiddleware');
+const { uploadPropertyImages } = require('../config/cloudinary');
 
-const authMiddleware = require("../middleware/authMiddleware");
+// Public routes
+router.get('/', getProperties);
+router.get('/:id', getPropertyById);
 
-// Get all properties (Public)
-router.get("/", getProperties);
-
-// Create a property (Logged-in users only)
-router.post("/", authMiddleware, createProperty);
+// Private routes
+router.post('/', protect, landlordOnly, uploadPropertyImages.array('images', 10), createProperty);
+router.get('/landlord/my-listings', protect, landlordOnly, getMyListings);
+router.put('/:id', protect, landlordOnly, updateProperty);
+router.delete('/:id', protect, landlordOnly, deleteProperty);
 
 module.exports = router;

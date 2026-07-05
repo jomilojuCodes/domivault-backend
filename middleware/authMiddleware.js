@@ -1,22 +1,50 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const protect = (req, res, next) => {
-  let token = req.headers.authorization;
+const protect = async (req, res, next) => {
+  let token;
 
-  if (!token || !token.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Not authorized" });
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith('Bearer')
+  ) {
+    try {
+      // Get token from header
+      token = req.headers.authorization.split(' ')[1];
+
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      // Get user from token
+      req.user = await User.findById(decoded.id).select('-password');
+
+      next();
+    } catch (error) {
+      res.status(401).json({ message: 'Not authorized, token failed' });
+    }
   }
 
-  try {
-    token = token.split(" ")[1];
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    req.user = decoded; // usually contains user id
-    next();
-  } catch (error) {
-    return res.status(401).json({ message: "Token invalid" });
+  if (!token) {
+    res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
 
-module.exports = protect;
+// Admin only middleware
+const adminOnly = (req, res, next) => {
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Not authorized as admin' });
+  }
+};
+
+// Landlord only middleware
+const landlordOnly = (req, res, next) => {
+  if (req.user && (req.user.role === 'landlord' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Not authorized as landlord' });
+  }
+};
+
+module.exports = { protect, adminOnly, landlordOnly };

@@ -1,109 +1,81 @@
-const jwt = require ("jsonwebtoken")
-const User = require("../models/User");
-const bcrypt = require("bcrypt");
-const validator = require("validator");
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
+// Generate JWT
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+};
+
+// @desc    Register user
+// @route   POST /api/auth/register
+// @access  Public
 const registerUser = async (req, res) => {
   try {
-    const { fullName, email, password } = req.body;
+    const { name, email, password, role, phone } = req.body;
 
-    // Check for empty fields
-    if (!fullName || !email || !password) {
-      return res.status(400).json({
-        message: "Please fill in all fields",
-      });
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
     }
-
-    // Validate email
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({
-        message: "Invalid email address",
-      });
-    }
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-      return res.status(400).json({
-        message: "User already exists",
-      });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await User.create({
-      fullName,
-      email,
-      password: hashedPassword,
-    });
+    const user = await User.create({ name, email, password, role, phone });
 
-    res.status(201).json({
-      message: "User registered successfully",
-      user: {
-        id: user._id,
-        fullName: user.fullName,
+    if (user) {
+      res.status(201).json({
+        _id: user._id,
+        name: user.name,
         email: user.email,
-      },
-    });
+        role: user.role,
+        phone: user.phone,
+        isVerified: user.isVerified,
+        token: generateToken(user._id),
+      });
+    }
   } catch (error) {
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
+
+// @desc    Login user
+// @route   POST /api/auth/login
+// @access  Public
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Please fill in all fields",
-      });
-    }
-
+    // Find user
     const user = await User.findOne({ email });
 
-    if (!user) {
-      return res.status(400).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.status(200).json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user._id,
-        fullName: user.fullName,
+    if (user && (await user.matchPassword(password))) {
+      res.json({
+        _id: user._id,
+        name: user.name,
         email: user.email,
-      },
-    });
+        role: user.role,
+        phone: user.phone,
+        isVerified: user.isVerified,
+        token: generateToken(user._id),
+      });
+    } else {
+      res.status(401).json({ message: 'Invalid email or password' });
+    }
   } catch (error) {
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ message: error.message });
   }
 };
-module.exports = {
-  registerUser,
-  loginUser,
+
+// @desc    Get current user profile
+// @route   GET /api/auth/me
+// @access  Private
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
+
+module.exports = { registerUser, loginUser, getMe };
