@@ -2,11 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 
-// Only load .env file in development
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
-}
-
 connectDB();
 
 const app = express();
