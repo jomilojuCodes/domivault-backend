@@ -19,6 +19,11 @@ const authRoutes = require('./routes/authRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
+// ADD THESE 3 LINES HERE
+console.log('Auth routes loaded:', typeof authRoutes);
+console.log('Property routes loaded:', typeof propertyRoutes);
+console.log('Admin routes loaded:', typeof adminRoutes);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Domivault API is running' });
 });
