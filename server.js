@@ -21,6 +21,14 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
 
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on ${HOST}:${PORT}`);
+});
+
+// Handle SIGTERM gracefully
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Process terminated');
+  });
 });
