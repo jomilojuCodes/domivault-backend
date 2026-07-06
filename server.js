@@ -15,19 +15,21 @@ app.use('/api/properties', require('./routes/propertyRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 
 app.get('/', (req, res) => {
-  res.json({ message: '🏠 Domivault API is running' });
+  res.json({ message: 'Domivault API is running' });
+});
+
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5000;
 const HOST = '0.0.0.0';
 
 const server = app.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+  console.log(`Server running on ${HOST}:${PORT}`);
 });
 
-// Handle SIGTERM gracefully
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
   server.close(() => {
     console.log('Process terminated');
   });
