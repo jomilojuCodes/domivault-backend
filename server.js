@@ -20,10 +20,7 @@ app.use((req, res, next) => {
 const authRoutes = require('./routes/authRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-
-console.log('Auth routes loaded:', typeof authRoutes);
-console.log('Property routes loaded:', typeof propertyRoutes);
-console.log('Admin routes loaded:', typeof adminRoutes);
+const messageRoutes = require('./routes/messageRoutes');
 
 app.get('/', (req, res) => {
   res.json({ message: 'Domivault API is running' });
@@ -32,6 +29,7 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: `Cannot ${req.method} ${req.url}` });
