@@ -1,6 +1,6 @@
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
-const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Start or get a conversation
 // @route   POST /api/messages/conversation
@@ -9,7 +9,6 @@ const startConversation = async (req, res) => {
   try {
     const { recipientId, propertyId } = req.body;
 
-    // Check if conversation already exists
     let conversation = await Conversation.findOne({
       participants: { $all: [req.user._id, recipientId] },
       property: propertyId,
@@ -19,6 +18,16 @@ const startConversation = async (req, res) => {
       conversation = await Conversation.create({
         participants: [req.user._id, recipientId],
         property: propertyId,
+      });
+
+      // Notify recipient of new enquiry
+      await createNotification({
+        recipient: recipientId,
+        type: 'new_enquiry',
+        title: 'New enquiry',
+        message: `${req.user.name} has sent you an enquiry about your property.`,
+        property: propertyId,
+        sender: req.user._id,
       });
     }
 
@@ -60,7 +69,6 @@ const getMessages = async (req, res) => {
       return res.status(404).json({ message: 'Conversation not found' });
     }
 
-    // Check user is part of this conversation
     if (!conversation.participants.includes(req.user._id)) {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -71,7 +79,6 @@ const getMessages = async (req, res) => {
       .populate('sender', 'name avatar role')
       .sort({ createdAt: 1 });
 
-    // Mark messages as read
     await Message.updateMany(
       {
         conversation: req.params.conversationId,
@@ -99,7 +106,6 @@ const sendMessage = async (req, res) => {
       return res.status(404).json({ message: 'Conversation not found' });
     }
 
-    // Check user is part of this conversation
     if (!conversation.participants.includes(req.user._id)) {
       return res.status(403).json({ message: 'Not authorized' });
     }
@@ -114,6 +120,20 @@ const sendMessage = async (req, res) => {
     conversation.lastMessage = text;
     conversation.lastMessageAt = new Date();
     await conversation.save();
+
+    // Notify the other participant
+    const recipientId = conversation.participants.find(
+      (p) => p.toString() !== req.user._id.toString()
+    );
+
+    await createNotification({
+      recipient: recipientId,
+      type: 'new_message',
+      title: 'New message',
+      message: `${req.user.name}: ${text.substring(0, 60)}${text.length > 60 ? '...' : ''}`,
+      property: conversation.property,
+      sender: req.user._id,
+    });
 
     await message.populate('sender', 'name avatar role');
 

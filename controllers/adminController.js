@@ -1,5 +1,6 @@
 const Property = require('../models/Property');
 const User = require('../models/User');
+const { createNotification } = require('./notificationController');
 
 // @desc    Get all properties (including pending)
 // @route   GET /api/admin/properties
@@ -30,6 +31,15 @@ const approveProperty = async (req, res) => {
     property.status = 'inspection_scheduled';
     await property.save();
 
+    // Notify landlord
+    await createNotification({
+      recipient: property.landlord,
+      type: 'listing_approved',
+      title: 'Listing approved!',
+      message: `Your listing "${property.title}" has been approved. An inspection will be scheduled shortly.`,
+      property: property._id,
+    });
+
     res.json({ message: 'Property approved and inspection scheduled', property });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -53,7 +63,16 @@ const markAsInspected = async (req, res) => {
     property.inspectionDate = new Date();
     await property.save();
 
-    res.json({ message: '✅ Property is now live on Domivault', property });
+    // Notify landlord
+    await createNotification({
+      recipient: property.landlord,
+      type: 'listing_live',
+      title: 'Your listing is now live!',
+      message: `Your listing "${property.title}" has been inspected and is now live on Domivault.`,
+      property: property._id,
+    });
+
+    res.json({ message: 'Property is now live on Domivault', property });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -73,6 +92,15 @@ const rejectProperty = async (req, res) => {
     property.status = 'rejected';
     property.isApproved = false;
     await property.save();
+
+    // Notify landlord
+    await createNotification({
+      recipient: property.landlord,
+      type: 'listing_rejected',
+      title: 'Listing rejected',
+      message: `Your listing "${property.title}" was not approved. Please review and resubmit.`,
+      property: property._id,
+    });
 
     res.json({ message: 'Property rejected', property });
   } catch (error) {
@@ -126,7 +154,15 @@ const verifyLandlord = async (req, res) => {
     user.isVerified = true;
     await user.save();
 
-    res.json({ message: '✅ Landlord verified', user });
+    // Notify landlord
+    await createNotification({
+      recipient: user._id,
+      type: 'system',
+      title: 'Account verified!',
+      message: 'Your landlord account has been verified. You can now list properties on Domivault.',
+    });
+
+    res.json({ message: 'Landlord verified', user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
