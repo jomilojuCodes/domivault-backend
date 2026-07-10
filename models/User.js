@@ -36,10 +36,28 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  // Landlord specific
+  isSuspended: {
+    type: Boolean,
+    default: false,
+  },
+  // Landlord verification
   nin: { type: String, default: '' },
   cacNumber: { type: String, default: '' },
+  cacDocument: { type: String, default: '' },
+  selfieUrl: { type: String, default: '' },
   faceVerified: { type: Boolean, default: false },
+  verificationStatus: {
+    type: String,
+    enum: [
+      'not_started',
+      'nin_submitted',
+      'cac_submitted',
+      'pending_review',
+      'verified',
+      'rejected',
+    ],
+    default: 'not_started',
+  },
 }, { timestamps: true });
 
 // Hash password before saving

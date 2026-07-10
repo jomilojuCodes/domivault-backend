@@ -27,4 +27,7 @@ const documentStorage = new CloudinaryStorage({
 const uploadPropertyImages = multer({ storage: propertyStorage });
 const uploadDocuments = multer({ storage: documentStorage });
 
+console.log('Cloudinary configured:', !!process.env.CLOUDINARY_CLOUD_NAME);
+console.log('uploadDocuments type:', typeof uploadDocuments);
+
 module.exports = { cloudinary, uploadPropertyImages, uploadDocuments };
