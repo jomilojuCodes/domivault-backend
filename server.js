@@ -24,10 +24,6 @@ const messageRoutes = require('./routes/messageRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const savedListingRoutes = require('./routes/savedListingRoutes');
 const verificationRoutes = require('./routes/verificationRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
-const analyticsRoutes = require('./routes/analyticsRoutes');
-
-console.log('verificationRoutes type:', typeof verificationRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Domivault API is running' });
@@ -40,9 +36,6 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/saved', savedListingRoutes);
 app.use('/api/verification', verificationRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/analytics', analyticsRoutes);
-
 
 app.use((req, res) => {
   res.status(404).json({ message: `Cannot ${req.method} ${req.url}` });
