@@ -1,5 +1,9 @@
 const Property = require('../models/Property');
 const User = require('../models/User');
+const Conversation = require('../models/Conversation');
+const Message = require('../models/Message');
+const SavedListing = require('../models/SavedListing');
+const Notification = require('../models/Notification');
 const { createNotification } = require('./notificationController');
 
 // @desc    Get all properties (including pending)
@@ -22,16 +26,12 @@ const getAllProperties = async (req, res) => {
 const approveProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
-
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
+    if (!property) return res.status(404).json({ message: 'Property not found' });
 
     property.isApproved = true;
     property.status = 'inspection_scheduled';
     await property.save();
 
-    // Notify landlord
     await createNotification({
       recipient: property.landlord,
       type: 'listing_approved',
@@ -52,10 +52,7 @@ const approveProperty = async (req, res) => {
 const markAsInspected = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
-
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
+    if (!property) return res.status(404).json({ message: 'Property not found' });
 
     property.isInspected = true;
     property.isApproved = true;
@@ -63,7 +60,6 @@ const markAsInspected = async (req, res) => {
     property.inspectionDate = new Date();
     await property.save();
 
-    // Notify landlord
     await createNotification({
       recipient: property.landlord,
       type: 'listing_live',
@@ -84,16 +80,12 @@ const markAsInspected = async (req, res) => {
 const rejectProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
-
-    if (!property) {
-      return res.status(404).json({ message: 'Property not found' });
-    }
+    if (!property) return res.status(404).json({ message: 'Property not found' });
 
     property.status = 'rejected';
     property.isApproved = false;
     await property.save();
 
-    // Notify landlord
     await createNotification({
       recipient: property.landlord,
       type: 'listing_rejected',
@@ -126,10 +118,7 @@ const getAllUsers = async (req, res) => {
 const suspendUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     user.isSuspended = true;
     await user.save();
@@ -146,15 +135,11 @@ const suspendUser = async (req, res) => {
 const verifyLandlord = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
     user.isVerified = true;
     await user.save();
 
-    // Notify landlord
     await createNotification({
       recipient: user._id,
       type: 'system',
@@ -168,6 +153,26 @@ const verifyLandlord = async (req, res) => {
   }
 };
 
+// @desc    Reset all dev data (keeps admin accounts)
+// @route   DELETE /api/admin/reset-dev-data
+// @access  Admin only
+const resetDevData = async (req, res) => {
+  try {
+    const deletedUsers = await User.deleteMany({ role: { $ne: 'admin' } });    await Property.deleteMany({});
+    await Conversation.deleteMany({});
+    await Message.deleteMany({});
+    await Notification.deleteMany({});
+    await SavedListing.deleteMany({});
+
+    res.json({
+      message: 'Dev data cleared successfully. Admin accounts preserved.',
+      deletedUsers: deletedUsers.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllProperties,
   approveProperty,
@@ -176,4 +181,5 @@ module.exports = {
   getAllUsers,
   suspendUser,
   verifyLandlord,
+  resetDevData,
 };
