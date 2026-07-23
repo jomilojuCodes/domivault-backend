@@ -178,7 +178,7 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = {s
+module.exports = {
   getAllProperties,
   approveProperty,
   markAsInspected,
