@@ -153,7 +153,8 @@ const getStats = async (req, res) => {
         role: { $ne: 'admin' }
       });
       weeks.push(count);
-      labels.push('Wk' + (8 - i));
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+labels.push(months[weekStart.getMonth()] + ' ' + weekStart.getDate());
     }
 
     const cumulative = [];
