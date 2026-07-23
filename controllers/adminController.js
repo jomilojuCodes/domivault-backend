@@ -136,27 +136,27 @@ const resetDevData = async (req, res) => {
   }
 };
 
-const getStats = async (req, res) => {
-  try {
-    const now = new Date();
-    const weeks = [];
-    const labels = [];
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-    for (let i = 7; i >= 0; i--) {
-      const weekStart = new Date(now);
-      weekStart.setDate(now.getDate() - (i * 7));
-      weekStart.setHours(0, 0, 0, 0);
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 7);
-      const count = await User.countDocuments({
-        createdAt: { $gte: weekStart, $lt: weekEnd },
-        role: { $ne: 'admin' }
-      });
-      weeks.push(count);
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-labels.push(months[weekStart.getMonth()] + ' ' + weekStart.getDate());
-    }
+// Start from the most recent Monday
+const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+const lastMonday = new Date(now);
+lastMonday.setDate(now.getDate() - daysToLastMonday);
+lastMonday.setHours(0, 0, 0, 0);
 
+for (let i = 7; i >= 0; i--) {
+  const weekStart = new Date(lastMonday);
+  weekStart.setDate(lastMonday.getDate() - (i * 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
+  const count = await User.countDocuments({
+    createdAt: { $gte: weekStart, $lt: weekEnd },
+    role: { $ne: 'admin' }
+  });
+  weeks.push(count);
+  labels.push(months[weekStart.getMonth()] + ' ' + weekStart.getDate());
+}
     const cumulative = [];
     let total = 0;
     for (let w of weeks) {
