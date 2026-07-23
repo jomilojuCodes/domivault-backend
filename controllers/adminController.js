@@ -149,7 +149,8 @@ const getStats = async (req, res) => {
       const weekEnd = new Date(weekStart);
       weekEnd.setDate(weekStart.getDate() + 7);
       const count = await User.countDocuments({
-        createdAt: { $gte: weekStart, $lt: weekEnd }
+        createdAt: { $gte: weekStart, $lt: weekEnd },
+        role: { $ne: 'admin' }
       });
       weeks.push(count);
       labels.push('Wk' + (8 - i));
@@ -166,7 +167,7 @@ const getStats = async (req, res) => {
       weeklySignups: weeks,
       cumulativeUsers: cumulative,
       labels,
-      totalUsers: await User.countDocuments({}),
+      totalUsers: await User.countDocuments({ role: { $ne: 'admin' } }),
       totalLandlords: await User.countDocuments({ role: 'landlord' }),
       totalTenants: await User.countDocuments({ role: 'tenant' }),
       liveListings: await Property.countDocuments({ status: 'live' }),
@@ -177,7 +178,7 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = {
+module.exports = {s
   getAllProperties,
   approveProperty,
   markAsInspected,
