@@ -9,6 +9,7 @@ const {
   suspendUser,
   verifyLandlord,
   resetDevData,
+  getStats,
 } = require('../controllers/adminController');
 const { protect, adminOnly } = require('../middleware/authMiddleware');
 
@@ -22,5 +23,6 @@ router.put('/users/:id/suspend', protect, adminOnly, suspendUser);
 router.put('/users/:id/verify', protect, adminOnly, verifyLandlord);
 
 router.delete('/reset-dev-data', protect, adminOnly, resetDevData);
+router.get('/stats', protect, adminOnly, getStats);
 
 module.exports = router;
