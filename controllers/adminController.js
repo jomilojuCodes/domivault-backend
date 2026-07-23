@@ -6,9 +6,6 @@ const SavedListing = require('../models/SavedListing');
 const Notification = require('../models/Notification');
 const { createNotification } = require('./notificationController');
 
-// @desc    Get all properties (including pending)
-// @route   GET /api/admin/properties
-// @access  Admin only
 const getAllProperties = async (req, res) => {
   try {
     const properties = await Property.find({})
@@ -20,18 +17,13 @@ const getAllProperties = async (req, res) => {
   }
 };
 
-// @desc    Approve a property listing
-// @route   PUT /api/admin/properties/:id/approve
-// @access  Admin only
 const approveProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
     if (!property) return res.status(404).json({ message: 'Property not found' });
-
     property.isApproved = true;
     property.status = 'inspection_scheduled';
     await property.save();
-
     await createNotification({
       recipient: property.landlord,
       type: 'listing_approved',
@@ -39,27 +31,21 @@ const approveProperty = async (req, res) => {
       message: `Your listing "${property.title}" has been approved. An inspection will be scheduled shortly.`,
       property: property._id,
     });
-
     res.json({ message: 'Property approved and inspection scheduled', property });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Mark property as inspected and live
-// @route   PUT /api/admin/properties/:id/inspect
-// @access  Admin only
 const markAsInspected = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
     if (!property) return res.status(404).json({ message: 'Property not found' });
-
     property.isInspected = true;
     property.isApproved = true;
     property.status = 'live';
     property.inspectionDate = new Date();
     await property.save();
-
     await createNotification({
       recipient: property.landlord,
       type: 'listing_live',
@@ -67,25 +53,19 @@ const markAsInspected = async (req, res) => {
       message: `Your listing "${property.title}" has been inspected and is now live on Domivault.`,
       property: property._id,
     });
-
     res.json({ message: 'Property is now live on Domivault', property });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Reject a property listing
-// @route   PUT /api/admin/properties/:id/reject
-// @access  Admin only
 const rejectProperty = async (req, res) => {
   try {
     const property = await Property.findById(req.params.id);
     if (!property) return res.status(404).json({ message: 'Property not found' });
-
     property.status = 'rejected';
     property.isApproved = false;
     await property.save();
-
     await createNotification({
       recipient: property.landlord,
       type: 'listing_rejected',
@@ -93,16 +73,12 @@ const rejectProperty = async (req, res) => {
       message: `Your listing "${property.title}" was not approved. Please review and resubmit.`,
       property: property._id,
     });
-
     res.json({ message: 'Property rejected', property });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Get all users
-// @route   GET /api/admin/users
-// @access  Admin only
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find({}).select('-password').sort({ createdAt: -1 });
@@ -112,61 +88,89 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// @desc    Suspend a user
-// @route   PUT /api/admin/users/:id/suspend
-// @access  Admin only
 const suspendUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-
     user.isSuspended = true;
     await user.save();
-
     res.json({ message: 'User suspended', user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Verify a landlord
-// @route   PUT /api/admin/users/:id/verify
-// @access  Admin only
 const verifyLandlord = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-
     user.isVerified = true;
+    user.isSuspended = false;
     await user.save();
-
     await createNotification({
       recipient: user._id,
       type: 'system',
       title: 'Account verified!',
       message: 'Your landlord account has been verified. You can now list properties on Domivault.',
     });
-
     res.json({ message: 'Landlord verified', user });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// @desc    Reset all dev data (keeps admin accounts)
-// @route   DELETE /api/admin/reset-dev-data
-// @access  Admin only
 const resetDevData = async (req, res) => {
   try {
-    const deletedUsers = await User.deleteMany({ role: { $ne: 'admin' } });    await Property.deleteMany({});
+    const deletedUsers = await User.deleteMany({ role: { $ne: 'admin' } });
+    await Property.deleteMany({});
     await Conversation.deleteMany({});
     await Message.deleteMany({});
     await Notification.deleteMany({});
     await SavedListing.deleteMany({});
-
     res.json({
       message: 'Dev data cleared successfully. Admin accounts preserved.',
       deletedUsers: deletedUsers.deletedCount,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getStats = async (req, res) => {
+  try {
+    const now = new Date();
+    const weeks = [];
+    const labels = [];
+
+    for (let i = 7; i >= 0; i--) {
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - (i * 7));
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 7);
+      const count = await User.countDocuments({
+        createdAt: { $gte: weekStart, $lt: weekEnd }
+      });
+      weeks.push(count);
+      labels.push('Wk' + (8 - i));
+    }
+
+    const cumulative = [];
+    let total = 0;
+    for (let w of weeks) {
+      total += w;
+      cumulative.push(total);
+    }
+
+    res.json({
+      weeklySignups: weeks,
+      cumulativeUsers: cumulative,
+      labels,
+      totalUsers: await User.countDocuments({}),
+      totalLandlords: await User.countDocuments({ role: 'landlord' }),
+      totalTenants: await User.countDocuments({ role: 'tenant' }),
+      liveListings: await Property.countDocuments({ status: 'live' }),
+      pendingListings: await Property.countDocuments({ status: 'pending' }),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -182,4 +186,5 @@ module.exports = {
   suspendUser,
   verifyLandlord,
   resetDevData,
+  getStats,
 };
